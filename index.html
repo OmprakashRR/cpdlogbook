@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1a73e8">
+<title>CPD Logbook</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --surface: #ffffff;
+    --text: #1f2328;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --accent: #1a73e8;
+    --accent-hover: #1557b0;
+    --danger: #dc2626;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    -webkit-tap-highlight-color: transparent;
+  }
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  header h1 { font-size: 18px; margin: 0; font-weight: 600; }
+  header .user { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); }
+  header .user img { width: 28px; height: 28px; border-radius: 50%; }
+
+  button {
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 14px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 8px 12px;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  button:hover { background: #f1f3f5; }
+  button.primary {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+  button.primary:hover { background: var(--accent-hover); }
+  button.danger { color: var(--danger); border-color: transparent; background: transparent; padding: 4px 8px; font-size: 16px; line-height: 1; }
+  button.danger:hover { background: rgba(220,38,38,0.08); }
+
+  input, textarea {
+    font-family: inherit;
+    font-size: 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    width: 100%;
+    background: var(--surface);
+    color: var(--text);
+  }
+  input:focus, textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(26,115,232,0.15);
+  }
+  textarea { resize: vertical; min-height: 60px; }
+
+  main { max-width: 720px; margin: 0 auto; padding: 16px; }
+
+  .signin {
+    max-width: 380px;
+    margin: 80px auto;
+    background: var(--surface);
+    padding: 32px 24px;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    text-align: center;
+  }
+  .signin h2 { margin-top: 0; }
+  .signin p { color: var(--muted); margin-bottom: 24px; }
+
+  .add-card {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+  }
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 10px 0;
+  }
+  .chip {
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 13px;
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    user-select: none;
+  }
+  .chip.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+  #add-btn {
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    font-size: 16px;
+    font-weight: 500;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 16px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .tabs button {
+    background: transparent;
+    border: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .tabs button.active {
+    background: var(--text);
+    color: white;
+    border-color: var(--text);
+  }
+
+  .day-group { margin-bottom: 20px; }
+  .day-header {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+  .entry {
+    background: var(--surface);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 6px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    box-shadow: var(--shadow);
+  }
+  .entry .time {
+    font-size: 12px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    min-width: 42px;
+    padding-top: 2px;
+  }
+  .entry .body { flex: 1; min-width: 0; }
+  .entry .text { word-wrap: break-word; white-space: pre-wrap; }
+  .entry .meta {
+    margin-top: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+  .cat-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #eef4ff;
+    color: var(--accent);
+    font-weight: 500;
+  }
+  .tag { font-size: 11px; color: var(--muted); }
+
+  .empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+  }
+
+  .footer-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  .stats-card {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: var(--shadow);
+    margin-bottom: 12px;
+  }
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .stat-row:last-child { border-bottom: none; }
+
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--text);
+    color: white;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+    z-index: 100;
+  }
+  .toast.show { opacity: 1; }
+
+  .config-warn {
+    max-width: 560px;
+    margin: 60px auto;
+    background: #fff7ed;
+    border: 1px solid #fdba74;
+    color: #7c2d12;
+    padding: 20px 24px;
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .config-warn code { background: rgba(0,0,0,0.06); padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+
+  @media (max-width: 480px) {
+    header h1 { font-size: 16px; }
+    main { padding: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="loading" style="text-align:center; padding:40px; color:var(--muted)">Loading…</div>
+
+<!-- Shown if firebaseConfig has not been filled in -->
+<div id="config-warn" class="config-warn" hidden>
+  <strong>Firebase not configured yet.</strong>
+  <p>Open <code>index.html</code> and paste your Firebase project config into the <code>firebaseConfig</code> block near the top of the <code>&lt;script&gt;</code> tag. See the setup notes Claude gave you in chat.</p>
+</div>
+
+<!-- Sign-in screen -->
+<div id="signin-screen" hidden>
+  <div class="signin">
+    <h2>CPD Logbook</h2>
+    <p>Sign in to access your personal logbook from any device.</p>
+    <button class="primary" id="signin-btn" style="width:100%; padding:12px; font-size:16px;">
+      Sign in with Google
+    </button>
+  </div>
+</div>
+
+<!-- Main app -->
+<div id="app" hidden>
+  <header>
+    <h1>CPD Logbook</h1>
+    <div class="user">
+      <img id="user-photo" alt="">
+      <button id="signout-btn" style="padding:4px 10px; font-size:13px;">Sign out</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="add-card">
+      <textarea id="entry-text" placeholder="What did you do?" rows="2"></textarea>
+      <div class="chips" id="cat-chips">
+        <span class="chip active" data-cat="general">general</span>
+        <span class="chip" data-cat="teaching">teaching</span>
+        <span class="chip" data-cat="research">research</span>
+        <span class="chip" data-cat="service">service</span>
+        <span class="chip" data-cat="admin">admin</span>
+        <span class="chip" data-cat="learning">learning</span>
+      </div>
+      <input id="custom-cat" placeholder="…or type a custom category" autocomplete="off">
+      <input id="entry-tags" placeholder="tags (comma-separated)" style="margin-top:10px" autocomplete="off">
+      <button class="primary" id="add-btn">+ Log entry</button>
+    </div>
+
+    <div class="tabs">
+      <button class="active" data-view="today">Today</button>
+      <button data-view="week">Week</button>
+      <button data-view="month">Month</button>
+      <button data-view="search">Search</button>
+      <button data-view="stats">Stats</button>
+    </div>
+
+    <div id="search-box" hidden style="margin-bottom:12px">
+      <input id="search-input" placeholder="Search text, category, or tag…" autocomplete="off">
+    </div>
+
+    <div id="entries"></div>
+
+    <div class="footer-actions">
+      <button id="export-json">Export JSON</button>
+      <button id="export-md">Export Markdown</button>
+      <button id="import-btn">Import JSON</button>
+      <input id="import-file" type="file" accept=".json" hidden>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+  // ╔════════════════════════════════════════════════════════════════╗
+  // ║  FIREBASE CONFIG — paste your project's config below           ║
+  // ║  (Firebase console → Project settings → Your apps → Web app)   ║
+  // ╚════════════════════════════════════════════════════════════════╝
+  const firebaseConfig = {
+    apiKey:            "AIzaSyB6vgIndtTXmU4Wq12xb2es-l9BiWu6-tA",
+    authDomain:        "cpdlogbook-a11f1.firebaseapp.com",
+    projectId:         "cpdlogbook-a11f1",
+    storageBucket:     "cpdlogbook-a11f1.firebasestorage.app",
+    messagingSenderId: "294563678347",
+    appId:             "1:294563678347:web:81813fd2c633aa20f9ec8e"
+  };
+
+  const $ = id => document.getElementById(id);
+
+  if (firebaseConfig.apiKey === "PASTE_API_KEY") {
+    $("loading").hidden = true;
+    $("config-warn").hidden = false;
+    throw new Error("Firebase config not set");
+  }
+
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+  import {
+    getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect,
+    getRedirectResult, onAuthStateChanged, signOut
+  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+  import {
+    getFirestore, collection, addDoc, deleteDoc, doc,
+    query, onSnapshot, orderBy, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const provider = new GoogleAuthProvider();
+
+  let currentUser = null;
+  let entriesCache = [];
+  let unsubscribe = null;
+  let currentView = "today";
+  let selectedCat = "general";
+
+  // Surface any redirect-flow error from a previous redirect-based sign-in
+  getRedirectResult(auth).catch(e => {
+    if (e && e.code) toast("Sign-in error: " + e.message);
+  });
+
+  $("signin-btn").addEventListener("click", async () => {
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (e) {
+      if (e.code === "auth/popup-blocked" || e.code === "auth/operation-not-supported-in-this-environment") {
+        await signInWithRedirect(auth, provider);
+      } else if (e.code !== "auth/cancelled-popup-request" && e.code !== "auth/popup-closed-by-user") {
+        toast("Sign-in failed: " + e.message);
+      }
+    }
+  });
+
+  $("signout-btn").addEventListener("click", () => signOut(auth));
+
+  onAuthStateChanged(auth, user => {
+    $("loading").hidden = true;
+    if (user) {
+      currentUser = user;
+      $("user-photo").src = user.photoURL || "";
+      $("signin-screen").hidden = true;
+      $("app").hidden = false;
+      subscribeEntries();
+    } else {
+      currentUser = null;
+      if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+      $("signin-screen").hidden = false;
+      $("app").hidden = true;
+    }
+  });
+
+  function subscribeEntries() {
+    const col = collection(db, "users", currentUser.uid, "entries");
+    const q = query(col, orderBy("timestamp", "desc"));
+    unsubscribe = onSnapshot(q, snap => {
+      entriesCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      render();
+    }, err => {
+      toast("Read error: " + err.message);
+    });
+  }
+
+  function selectCat(cat) {
+    selectedCat = cat;
+    document.querySelectorAll("#cat-chips .chip").forEach(c => {
+      c.classList.toggle("active", c.dataset.cat === cat);
+    });
+  }
+  document.querySelectorAll("#cat-chips .chip").forEach(c => {
+    c.addEventListener("click", () => {
+      selectCat(c.dataset.cat);
+      $("custom-cat").value = "";
+    });
+  });
+  $("custom-cat").addEventListener("input", () => {
+    document.querySelectorAll("#cat-chips .chip").forEach(c => c.classList.remove("active"));
+  });
+
+  async function addEntry() {
+    const text = $("entry-text").value.trim();
+    if (!text) { toast("Type something first"); return; }
+    const customCat = $("custom-cat").value.trim().toLowerCase();
+    const category = customCat || selectedCat || "general";
+    const tags = $("entry-tags").value
+      .split(",").map(t => t.trim().toLowerCase().replace(/^#/, "")).filter(Boolean);
+    try {
+      await addDoc(collection(db, "users", currentUser.uid, "entries"), {
+        text, category, tags,
+        timestamp: new Date().toISOString(),
+        createdAt: serverTimestamp()
+      });
+      $("entry-text").value = "";
+      $("entry-tags").value = "";
+      $("custom-cat").value = "";
+      selectCat("general");
+      toast("Logged");
+    } catch (e) {
+      toast("Save failed: " + e.message);
+    }
+  }
+  $("add-btn").addEventListener("click", addEntry);
+  $("entry-text").addEventListener("keydown", e => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") addEntry();
+  });
+
+  async function deleteEntry(id) {
+    if (!confirm("Delete this entry?")) return;
+    try {
+      await deleteDoc(doc(db, "users", currentUser.uid, "entries", id));
+      toast("Deleted");
+    } catch (e) {
+      toast("Delete failed: " + e.message);
+    }
+  }
+
+  document.querySelectorAll(".tabs button").forEach(b => {
+    b.addEventListener("click", () => {
+      document.querySelectorAll(".tabs button").forEach(x => x.classList.remove("active"));
+      b.classList.add("active");
+      currentView = b.dataset.view;
+      $("search-box").hidden = currentView !== "search";
+      render();
+    });
+  });
+  $("search-input").addEventListener("input", render);
+
+  function filterEntries() {
+    const now = new Date();
+    const startOfDay = d => { const x = new Date(d); x.setHours(0,0,0,0); return x; };
+    const today = startOfDay(now);
+    if (currentView === "today") {
+      return entriesCache.filter(e => startOfDay(new Date(e.timestamp)).getTime() === today.getTime());
+    }
+    if (currentView === "week") {
+      const start = new Date(today); start.setDate(start.getDate() - 6);
+      return entriesCache.filter(e => new Date(e.timestamp) >= start);
+    }
+    if (currentView === "month") {
+      const start = new Date(today.getFullYear(), today.getMonth(), 1);
+      return entriesCache.filter(e => new Date(e.timestamp) >= start);
+    }
+    if (currentView === "search") {
+      const q = $("search-input").value.trim().toLowerCase();
+      if (!q) return [];
+      return entriesCache.filter(e =>
+        e.text.toLowerCase().includes(q) ||
+        e.category.includes(q) ||
+        (e.tags||[]).some(t => t.includes(q))
+      );
+    }
+    return entriesCache;
+  }
+
+  function render() {
+    const container = $("entries");
+    if (currentView === "stats") { renderStats(container); return; }
+    const entries = filterEntries();
+    if (!entries.length) {
+      const msg = currentView === "search"
+        ? "No matches. Try a different keyword."
+        : "No entries yet.";
+      container.innerHTML = `<div class="empty">${msg}</div>`;
+      return;
+    }
+    const groups = {};
+    for (const e of entries) {
+      const key = new Date(e.timestamp).toISOString().slice(0,10);
+      (groups[key] ||= []).push(e);
+    }
+    const days = Object.keys(groups).sort().reverse();
+    container.innerHTML = days.map(day => {
+      const items = groups[day].sort((a,b) => b.timestamp.localeCompare(a.timestamp));
+      return `
+        <div class="day-group">
+          <div class="day-header">${formatDay(day)}</div>
+          ${items.map(entryHTML).join("")}
+        </div>`;
+    }).join("");
+    container.querySelectorAll("[data-del]").forEach(b => {
+      b.addEventListener("click", () => deleteEntry(b.dataset.del));
+    });
+  }
+
+  function entryHTML(e) {
+    const t = new Date(e.timestamp);
+    const hh = String(t.getHours()).padStart(2,"0");
+    const mm = String(t.getMinutes()).padStart(2,"0");
+    const tags = (e.tags||[]).map(x => `<span class="tag">#${esc(x)}</span>`).join("");
+    return `
+      <div class="entry">
+        <div class="time">${hh}:${mm}</div>
+        <div class="body">
+          <div class="text">${esc(e.text)}</div>
+          <div class="meta">
+            <span class="cat-badge">${esc(e.category)}</span>
+            ${tags}
+          </div>
+        </div>
+        <button class="danger" data-del="${e.id}" aria-label="Delete entry" title="Delete">×</button>
+      </div>`;
+  }
+
+  function formatDay(iso) {
+    const d = new Date(iso + "T00:00:00");
+    const today = new Date(); today.setHours(0,0,0,0);
+    const diff = Math.round((today - d) / 86400000);
+    const opts = { weekday: "long", month: "short", day: "numeric" };
+    if (diff === 0) return "Today · " + d.toLocaleDateString(undefined, opts);
+    if (diff === 1) return "Yesterday · " + d.toLocaleDateString(undefined, opts);
+    return d.toLocaleDateString(undefined, { ...opts, year: "numeric" });
+  }
+
+  function renderStats(container) {
+    if (!entriesCache.length) {
+      container.innerHTML = `<div class="empty">No entries yet.</div>`;
+      return;
+    }
+    const byCat = {}, byTag = {};
+    for (const e of entriesCache) {
+      byCat[e.category] = (byCat[e.category]||0) + 1;
+      for (const t of (e.tags||[])) byTag[t] = (byTag[t]||0) + 1;
+    }
+    const sortDesc = o => Object.entries(o).sort((a,b) => b[1] - a[1]);
+    const first = entriesCache[entriesCache.length - 1].timestamp.slice(0,10);
+    const last  = entriesCache[0].timestamp.slice(0,10);
+    container.innerHTML = `
+      <div class="stats-card">
+        <div class="stat-row"><strong>Total entries</strong><span>${entriesCache.length}</span></div>
+        <div class="stat-row"><strong>First entry</strong><span>${first}</span></div>
+        <div class="stat-row"><strong>Latest entry</strong><span>${last}</span></div>
+      </div>
+      <div class="stats-card">
+        <div class="day-header">By category</div>
+        ${sortDesc(byCat).map(([k,v]) => `<div class="stat-row"><span>${esc(k)}</span><span>${v}</span></div>`).join("")}
+      </div>
+      ${Object.keys(byTag).length ? `
+      <div class="stats-card">
+        <div class="day-header">Top tags</div>
+        ${sortDesc(byTag).slice(0,15).map(([k,v]) => `<div class="stat-row"><span>#${esc(k)}</span><span>${v}</span></div>`).join("")}
+      </div>` : ""}
+    `;
+  }
+
+  $("export-json").addEventListener("click", () => {
+    const payload = JSON.stringify({
+      entries: entriesCache.map(({ id, createdAt, ...rest }) => rest)
+    }, null, 2);
+    download("logbook-" + new Date().toISOString().slice(0,10) + ".json", payload, "application/json");
+  });
+
+  $("export-md").addEventListener("click", () => {
+    const sorted = [...entriesCache].sort((a,b) => a.timestamp.localeCompare(b.timestamp));
+    const lines = ["# CPD Logbook", ""];
+    let cur = null;
+    for (const e of sorted) {
+      const day = e.timestamp.slice(0,10);
+      if (day !== cur) { lines.push("", "## " + day, ""); cur = day; }
+      const t = new Date(e.timestamp);
+      const hh = String(t.getHours()).padStart(2,"0"), mm = String(t.getMinutes()).padStart(2,"0");
+      const tags = (e.tags||[]).map(x => `#${x}`).join(" ");
+      lines.push(`- **${hh}:${mm}** \`[${e.category}]\` ${e.text}${tags ? " " + tags : ""}`);
+    }
+    download("logbook-" + new Date().toISOString().slice(0,10) + ".md", lines.join("\n") + "\n", "text/markdown");
+  });
+
+  $("import-btn").addEventListener("click", () => $("import-file").click());
+  $("import-file").addEventListener("change", async ev => {
+    const file = ev.target.files[0];
+    if (!file) return;
+    try {
+      const data = JSON.parse(await file.text());
+      const entries = Array.isArray(data) ? data : data.entries;
+      if (!Array.isArray(entries)) throw new Error("Invalid JSON shape");
+      if (!confirm(`Import ${entries.length} entries? They will be added to your logbook.`)) return;
+      for (const e of entries) {
+        await addDoc(collection(db, "users", currentUser.uid, "entries"), {
+          text: e.text || "",
+          category: (e.category || "general").toLowerCase(),
+          tags: Array.isArray(e.tags) ? e.tags : [],
+          timestamp: e.timestamp || new Date().toISOString(),
+          createdAt: serverTimestamp()
+        });
+      }
+      toast(`Imported ${entries.length} entries`);
+    } catch (e) {
+      toast("Import failed: " + e.message);
+    }
+    ev.target.value = "";
+  });
+
+  function download(name, content, mime) {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = name; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  let toastTimer;
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 1800);
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, c =>
+      ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+</script>
+
+</body>
+</html>
