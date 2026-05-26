@@ -191,7 +191,125 @@
     color: var(--accent);
     font-weight: 500;
   }
+  .hours-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #fef3c7;
+    color: #92400e;
+    font-weight: 500;
+  }
   .tag { font-size: 11px; color: var(--muted); }
+  .entry .reflection {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: #f9fafb;
+    border-left: 3px solid var(--accent);
+    border-radius: 4px;
+    font-size: 13px;
+    color: #4b5563;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  .entry-actions { display: flex; flex-direction: column; gap: 2px; }
+  .icon-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--muted);
+    padding: 4px 8px;
+    font-size: 14px;
+    line-height: 1;
+    border-radius: 6px;
+  }
+  .icon-btn:hover { background: rgba(0,0,0,0.05); color: var(--text); }
+
+  .edit-form {
+    background: var(--surface);
+    border-left: 3px solid var(--accent);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 6px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .edit-form label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: -4px;
+  }
+  .edit-actions { display: flex; gap: 8px; margin-top: 4px; }
+  .edit-actions button { flex: 1; padding: 10px; }
+
+  .tag-suggestions {
+    margin-top: 6px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .tag-sugg {
+    font-size: 12px;
+    padding: 3px 10px;
+    background: #eef4ff;
+    color: var(--accent);
+    border: 1px solid #dbe9ff;
+    border-radius: 999px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .tag-sugg:hover { background: #dbe9ff; }
+
+  .month-block { margin-bottom: 8px; }
+  .month-block > summary {
+    cursor: pointer;
+    padding: 10px 14px;
+    background: var(--surface);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    font-weight: 600;
+    list-style: none;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .month-block > summary::-webkit-details-marker { display: none; }
+  .month-block > summary::marker { display: none; }
+  .month-block > summary::before {
+    content: "▸";
+    color: var(--muted);
+    margin-right: 8px;
+    display: inline-block;
+    transition: transform 0.15s;
+  }
+  .month-block[open] > summary::before { transform: rotate(90deg); }
+  .month-summary-text {
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: normal;
+  }
+  .month-content { padding: 12px 4px 4px; }
+  .year-header {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow);
+    text-align: center;
+  }
+  .year-header .big {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .year-header .sub {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
 
   .empty {
     text-align: center;
@@ -303,11 +421,19 @@
       </div>
       <input id="custom-cat" placeholder="…or type a custom category" autocomplete="off">
       <input id="entry-tags" placeholder="tags (comma-separated)" style="margin-top:10px" autocomplete="off">
+      <div id="tag-suggestions" class="tag-suggestions" hidden></div>
+      <input id="entry-hours" type="number" step="0.25" min="0" placeholder="hours (optional, e.g. 1.5)" style="margin-top:10px" inputmode="decimal" autocomplete="off">
       <details id="datetime-details" style="margin-top:10px">
         <summary style="cursor:pointer; font-size:13px; color:var(--muted); padding:4px 0; user-select:none;">
           Backfill — log for a different date/time
         </summary>
         <input id="entry-datetime" type="datetime-local" style="margin-top:6px" aria-label="Entry date and time">
+      </details>
+      <details id="reflection-details" style="margin-top:8px">
+        <summary style="cursor:pointer; font-size:13px; color:var(--muted); padding:4px 0; user-select:none;">
+          Add reflection (optional)
+        </summary>
+        <textarea id="entry-reflection" rows="3" placeholder="What did you learn? What went well, what would you do differently?" style="margin-top:6px;"></textarea>
       </details>
       <button class="primary" id="add-btn">+ Log entry</button>
     </div>
@@ -316,6 +442,7 @@
       <button class="active" data-view="today">Today</button>
       <button data-view="week">Week</button>
       <button data-view="month">Month</button>
+      <button data-view="year">Year</button>
       <button data-view="search">Search</button>
       <button data-view="stats">Stats</button>
     </div>
@@ -365,7 +492,7 @@
     getRedirectResult, onAuthStateChanged, signOut
   } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
   import {
-    getFirestore, collection, addDoc, deleteDoc, doc,
+    getFirestore, collection, addDoc, deleteDoc, updateDoc, doc,
     query, onSnapshot, orderBy, serverTimestamp
   } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
@@ -379,6 +506,7 @@
   let unsubscribe = null;
   let currentView = "today";
   let selectedCat = "general";
+  let editingId = null;
 
   // Surface any redirect-flow error from a previous redirect-based sign-in
   getRedirectResult(auth).catch(e => {
@@ -451,17 +579,27 @@
       .split(",").map(t => t.trim().toLowerCase().replace(/^#/, "")).filter(Boolean);
     const dtVal = $("entry-datetime").value;
     const timestamp = dtVal ? new Date(dtVal).toISOString() : new Date().toISOString();
+    const hoursStr = $("entry-hours").value.trim();
+    const hours = hoursStr ? parseFloat(hoursStr) : null;
+    const reflection = $("entry-reflection").value.trim() || null;
+    const docData = {
+      text, category, tags,
+      timestamp,
+      createdAt: serverTimestamp()
+    };
+    if (hours !== null && !isNaN(hours) && hours > 0) docData.hours = hours;
+    if (reflection) docData.reflection = reflection;
     try {
-      await addDoc(collection(db, "users", currentUser.uid, "entries"), {
-        text, category, tags,
-        timestamp,
-        createdAt: serverTimestamp()
-      });
+      await addDoc(collection(db, "users", currentUser.uid, "entries"), docData);
       $("entry-text").value = "";
       $("entry-tags").value = "";
       $("custom-cat").value = "";
       $("entry-datetime").value = "";
+      $("entry-hours").value = "";
+      $("entry-reflection").value = "";
       $("datetime-details").open = false;
+      $("reflection-details").open = false;
+      $("tag-suggestions").hidden = true;
       selectCat("general");
       toast(dtVal ? "Logged (backfilled)" : "Logged");
     } catch (e) {
@@ -471,6 +609,40 @@
   $("add-btn").addEventListener("click", addEntry);
   $("entry-text").addEventListener("keydown", e => {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") addEntry();
+  });
+
+  // Tag autocomplete
+  function refreshTagSuggestions() {
+    const input = $("entry-tags");
+    const value = input.value;
+    const lastComma = value.lastIndexOf(",");
+    const partial = value.slice(lastComma + 1).trim().toLowerCase();
+    const box = $("tag-suggestions");
+    if (!partial) { box.hidden = true; box.innerHTML = ""; return; }
+    const all = new Set();
+    for (const e of entriesCache) for (const t of (e.tags||[])) all.add(t);
+    const matches = [...all].filter(t => t.startsWith(partial) && t !== partial).sort().slice(0, 6);
+    if (!matches.length) { box.hidden = true; box.innerHTML = ""; return; }
+    box.innerHTML = matches.map(t => `<span class="tag-sugg" data-tag="${esc(t)}">${esc(t)}</span>`).join("");
+    box.hidden = false;
+  }
+  $("entry-tags").addEventListener("input", refreshTagSuggestions);
+  $("entry-tags").addEventListener("focus", refreshTagSuggestions);
+  $("entry-tags").addEventListener("blur", () => {
+    setTimeout(() => { $("tag-suggestions").hidden = true; }, 200);
+  });
+  $("tag-suggestions").addEventListener("mousedown", e => {
+    // mousedown (not click) so it fires before the input's blur
+    if (!e.target.matches(".tag-sugg")) return;
+    e.preventDefault();
+    const tag = e.target.dataset.tag;
+    const input = $("entry-tags");
+    const value = input.value;
+    const lastComma = value.lastIndexOf(",");
+    const prefix = lastComma >= 0 ? value.slice(0, lastComma + 1) + " " : "";
+    input.value = prefix + tag + ", ";
+    input.focus();
+    refreshTagSuggestions();
   });
 
   async function deleteEntry(id) {
@@ -509,6 +681,10 @@
       const start = new Date(today.getFullYear(), today.getMonth(), 1);
       return entriesCache.filter(e => new Date(e.timestamp) >= start);
     }
+    if (currentView === "year") {
+      const year = today.getFullYear();
+      return entriesCache.filter(e => new Date(e.timestamp).getFullYear() === year);
+    }
     if (currentView === "search") {
       const q = $("search-input").value.trim().toLowerCase();
       if (!q) return [];
@@ -524,6 +700,7 @@
   function render() {
     const container = $("entries");
     if (currentView === "stats") { renderStats(container); return; }
+    if (currentView === "year")  { renderYear(container);  return; }
     const entries = filterEntries();
     if (!entries.length) {
       const msg = currentView === "search"
@@ -546,16 +723,71 @@
           ${items.map(entryHTML).join("")}
         </div>`;
     }).join("");
-    container.querySelectorAll("[data-del]").forEach(b => {
-      b.addEventListener("click", () => deleteEntry(b.dataset.del));
-    });
+    wireEntryButtons(container);
+  }
+
+  function renderYear(container) {
+    const year = new Date().getFullYear();
+    const entries = entriesCache.filter(e => new Date(e.timestamp).getFullYear() === year);
+    if (!entries.length) {
+      container.innerHTML = `<div class="empty">No entries in ${year} yet.</div>`;
+      return;
+    }
+    const totalHours = entries.reduce((s,e) => s + (e.hours || 0), 0);
+    const byMonth = {};
+    for (const e of entries) {
+      const m = new Date(e.timestamp).getMonth();
+      (byMonth[m] ||= []).push(e);
+    }
+    const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    const currentMonth = new Date().getMonth();
+    let html = `
+      <div class="year-header">
+        <div class="big">${year}</div>
+        <div class="sub">${entries.length} ${entries.length === 1 ? "entry" : "entries"}${totalHours ? ` · ${roundHours(totalHours)} hours` : ""}</div>
+      </div>`;
+    for (let m = 11; m >= 0; m--) {
+      if (!byMonth[m]) continue;
+      const monthEntries = byMonth[m].sort((a,b) => b.timestamp.localeCompare(a.timestamp));
+      const monthHours = monthEntries.reduce((s,e) => s + (e.hours || 0), 0);
+      const byDay = {};
+      for (const e of monthEntries) {
+        const day = new Date(e.timestamp).toISOString().slice(0,10);
+        (byDay[day] ||= []).push(e);
+      }
+      const days = Object.keys(byDay).sort().reverse();
+      const daysHTML = days.map(day => `
+        <div class="day-group">
+          <div class="day-header">${formatDay(day)}</div>
+          ${byDay[day].map(entryHTML).join("")}
+        </div>
+      `).join("");
+      const openAttr = m === currentMonth ? "open" : "";
+      html += `
+        <details class="month-block" ${openAttr}>
+          <summary>
+            <span>${monthNames[m]}</span>
+            <span class="month-summary-text">${monthEntries.length}${monthHours ? ` · ${roundHours(monthHours)}h` : ""}</span>
+          </summary>
+          <div class="month-content">${daysHTML}</div>
+        </details>`;
+    }
+    container.innerHTML = html;
+    wireEntryButtons(container);
+  }
+
+  function roundHours(h) {
+    return Number.isInteger(h) ? h : h.toFixed(2).replace(/\.?0+$/, "");
   }
 
   function entryHTML(e) {
+    if (e.id === editingId) return editFormHTML(e);
     const t = new Date(e.timestamp);
     const hh = String(t.getHours()).padStart(2,"0");
     const mm = String(t.getMinutes()).padStart(2,"0");
     const tags = (e.tags||[]).map(x => `<span class="tag">#${esc(x)}</span>`).join("");
+    const hoursBadge = e.hours ? `<span class="hours-badge">${e.hours}h</span>` : "";
+    const reflection = e.reflection ? `<div class="reflection">${esc(e.reflection)}</div>` : "";
     return `
       <div class="entry">
         <div class="time">${hh}:${mm}</div>
@@ -563,11 +795,92 @@
           <div class="text">${esc(e.text)}</div>
           <div class="meta">
             <span class="cat-badge">${esc(e.category)}</span>
+            ${hoursBadge}
             ${tags}
           </div>
+          ${reflection}
         </div>
-        <button class="danger" data-del="${e.id}" aria-label="Delete entry" title="Delete">×</button>
+        <div class="entry-actions">
+          <button class="icon-btn" data-edit="${e.id}" aria-label="Edit" title="Edit">✎</button>
+          <button class="danger" data-del="${e.id}" aria-label="Delete" title="Delete">×</button>
+        </div>
       </div>`;
+  }
+
+  function editFormHTML(e) {
+    const t = new Date(e.timestamp);
+    const pad = n => String(n).padStart(2,"0");
+    const localDt = `${t.getFullYear()}-${pad(t.getMonth()+1)}-${pad(t.getDate())}T${pad(t.getHours())}:${pad(t.getMinutes())}`;
+    const tagsStr = (e.tags||[]).join(", ");
+    return `
+      <div class="edit-form" data-entry-id="${e.id}">
+        <label>Text</label>
+        <textarea data-field="text" rows="2">${esc(e.text)}</textarea>
+        <label>Category</label>
+        <input data-field="category" value="${esc(e.category)}" autocomplete="off">
+        <label>Tags (comma-separated)</label>
+        <input data-field="tags" value="${esc(tagsStr)}" autocomplete="off">
+        <label>Hours (optional)</label>
+        <input data-field="hours" type="number" step="0.25" min="0" value="${e.hours || ""}" inputmode="decimal">
+        <label>Date/time</label>
+        <input data-field="timestamp" type="datetime-local" value="${localDt}">
+        <label>Reflection (optional)</label>
+        <textarea data-field="reflection" rows="3">${esc(e.reflection || "")}</textarea>
+        <div class="edit-actions">
+          <button class="primary" data-save="${e.id}">Save</button>
+          <button data-cancel>Cancel</button>
+        </div>
+      </div>`;
+  }
+
+  function startEdit(id) {
+    editingId = id;
+    render();
+    setTimeout(() => {
+      const f = document.querySelector('.edit-form [data-field="text"]');
+      if (f) { f.focus(); f.setSelectionRange(f.value.length, f.value.length); }
+    }, 0);
+  }
+
+  function cancelEdit() {
+    editingId = null;
+    render();
+  }
+
+  async function saveEdit(id) {
+    const form = document.querySelector(`.edit-form[data-entry-id="${id}"]`);
+    if (!form) return;
+    const get = field => form.querySelector(`[data-field="${field}"]`).value;
+    const text = get("text").trim();
+    if (!text) { toast("Text required"); return; }
+    const category = get("category").trim().toLowerCase() || "general";
+    const tags = get("tags").split(",").map(t => t.trim().toLowerCase().replace(/^#/, "")).filter(Boolean);
+    const hoursStr = get("hours").trim();
+    const dtVal = get("timestamp");
+    const orig = entriesCache.find(x => x.id === id);
+    const timestamp = dtVal ? new Date(dtVal).toISOString() : (orig ? orig.timestamp : new Date().toISOString());
+    const reflection = get("reflection").trim();
+    const hoursVal = hoursStr ? parseFloat(hoursStr) : null;
+    const update = {
+      text, category, tags, timestamp,
+      hours: (hoursVal !== null && !isNaN(hoursVal) && hoursVal > 0) ? hoursVal : null,
+      reflection: reflection || null
+    };
+    editingId = null;
+    try {
+      await updateDoc(doc(db, "users", currentUser.uid, "entries", id), update);
+      toast("Saved");
+    } catch (err) {
+      toast("Save failed: " + err.message);
+      render();
+    }
+  }
+
+  function wireEntryButtons(container) {
+    container.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", () => deleteEntry(b.dataset.del)));
+    container.querySelectorAll("[data-edit]").forEach(b => b.addEventListener("click", () => startEdit(b.dataset.edit)));
+    container.querySelectorAll("[data-save]").forEach(b => b.addEventListener("click", () => saveEdit(b.dataset.save)));
+    container.querySelectorAll("[data-cancel]").forEach(b => b.addEventListener("click", cancelEdit));
   }
 
   function formatDay(iso) {
@@ -585,23 +898,36 @@
       container.innerHTML = `<div class="empty">No entries yet.</div>`;
       return;
     }
-    const byCat = {}, byTag = {};
+    const byCat = {}, byTag = {}, hoursByCat = {};
+    let totalHours = 0;
     for (const e of entriesCache) {
       byCat[e.category] = (byCat[e.category]||0) + 1;
+      if (e.hours) {
+        hoursByCat[e.category] = (hoursByCat[e.category]||0) + e.hours;
+        totalHours += e.hours;
+      }
       for (const t of (e.tags||[])) byTag[t] = (byTag[t]||0) + 1;
     }
     const sortDesc = o => Object.entries(o).sort((a,b) => b[1] - a[1]);
     const first = entriesCache[entriesCache.length - 1].timestamp.slice(0,10);
     const last  = entriesCache[0].timestamp.slice(0,10);
+    const yearNow = new Date().getFullYear();
+    const yearEntries = entriesCache.filter(e => new Date(e.timestamp).getFullYear() === yearNow);
+    const yearHours = yearEntries.reduce((s,e) => s + (e.hours||0), 0);
     container.innerHTML = `
       <div class="stats-card">
         <div class="stat-row"><strong>Total entries</strong><span>${entriesCache.length}</span></div>
+        ${totalHours ? `<div class="stat-row"><strong>Total hours</strong><span>${roundHours(totalHours)}h</span></div>` : ""}
+        <div class="stat-row"><strong>${yearNow}</strong><span>${yearEntries.length} entries${yearHours ? ` · ${roundHours(yearHours)}h` : ""}</span></div>
         <div class="stat-row"><strong>First entry</strong><span>${first}</span></div>
         <div class="stat-row"><strong>Latest entry</strong><span>${last}</span></div>
       </div>
       <div class="stats-card">
         <div class="day-header">By category</div>
-        ${sortDesc(byCat).map(([k,v]) => `<div class="stat-row"><span>${esc(k)}</span><span>${v}</span></div>`).join("")}
+        ${sortDesc(byCat).map(([k,v]) => {
+          const h = hoursByCat[k];
+          return `<div class="stat-row"><span>${esc(k)}</span><span>${v}${h ? ` · ${roundHours(h)}h` : ""}</span></div>`;
+        }).join("")}
       </div>
       ${Object.keys(byTag).length ? `
       <div class="stats-card">
@@ -628,7 +954,11 @@
       const t = new Date(e.timestamp);
       const hh = String(t.getHours()).padStart(2,"0"), mm = String(t.getMinutes()).padStart(2,"0");
       const tags = (e.tags||[]).map(x => `#${x}`).join(" ");
-      lines.push(`- **${hh}:${mm}** \`[${e.category}]\` ${e.text}${tags ? " " + tags : ""}`);
+      const hoursStr = e.hours ? ` · ${roundHours(e.hours)}h` : "";
+      lines.push(`- **${hh}:${mm}** \`[${e.category}]\`${hoursStr} ${e.text}${tags ? " " + tags : ""}`);
+      if (e.reflection) {
+        for (const ln of e.reflection.split("\n")) lines.push(`  > ${ln}`);
+      }
     }
     download("logbook-" + new Date().toISOString().slice(0,10) + ".md", lines.join("\n") + "\n", "text/markdown");
   });
