@@ -303,6 +303,12 @@
       </div>
       <input id="custom-cat" placeholder="…or type a custom category" autocomplete="off">
       <input id="entry-tags" placeholder="tags (comma-separated)" style="margin-top:10px" autocomplete="off">
+      <details id="datetime-details" style="margin-top:10px">
+        <summary style="cursor:pointer; font-size:13px; color:var(--muted); padding:4px 0; user-select:none;">
+          Backfill — log for a different date/time
+        </summary>
+        <input id="entry-datetime" type="datetime-local" style="margin-top:6px" aria-label="Entry date and time">
+      </details>
       <button class="primary" id="add-btn">+ Log entry</button>
     </div>
 
@@ -443,17 +449,21 @@
     const category = customCat || selectedCat || "general";
     const tags = $("entry-tags").value
       .split(",").map(t => t.trim().toLowerCase().replace(/^#/, "")).filter(Boolean);
+    const dtVal = $("entry-datetime").value;
+    const timestamp = dtVal ? new Date(dtVal).toISOString() : new Date().toISOString();
     try {
       await addDoc(collection(db, "users", currentUser.uid, "entries"), {
         text, category, tags,
-        timestamp: new Date().toISOString(),
+        timestamp,
         createdAt: serverTimestamp()
       });
       $("entry-text").value = "";
       $("entry-tags").value = "";
       $("custom-cat").value = "";
+      $("entry-datetime").value = "";
+      $("datetime-details").open = false;
       selectCat("general");
-      toast("Logged");
+      toast(dtVal ? "Logged (backfilled)" : "Logged");
     } catch (e) {
       toast("Save failed: " + e.message);
     }
